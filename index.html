@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -501,13 +502,19 @@
     </div>
 
     <script>
+        // Supabase initialization
+        const SUPABASE_URL = 'https://ywoqlbzrksjjcwodxxkn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3b3FsYnpya3NqamN3b2R4eGtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2MjQyMzUsImV4cCI6MjA2NzIwMDIzNX0.FqBBYhI9X5xfQLbwnX9OGcJYXr0tRX9X5I8bTvA91Ak';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         // Application State
         let appState = {
-            tasks: JSON.parse(localStorage.getItem('entrepreneurTasks')) || [],
-            clients: JSON.parse(localStorage.getItem('entrepreneurClients')) || [],
-            goals: JSON.parse(localStorage.getItem('entrepreneurGoals')) || [],
-            settings: JSON.parse(localStorage.getItem('entrepreneurSettings')) || { darkMode: false },
-            analytics: JSON.parse(localStorage.getItem('entrepreneurAnalytics')) || { focusTime: 0, streakDays: 0 },
+            tasks: [],
+            clients: [],
+            goals: [],
+            settings: { darkMode: false },
+            analytics: { focusTime: 0, streakDays: 0, monthlyRevenue: 0 },
+            activities: [],
             currentView: 'dashboard',
             editingTask: null,
             timer: { minutes: 25, seconds: 0, isRunning: false, interval: null, type: 'focus' }
@@ -688,181 +695,200 @@
             }
         }
 
-        function addTask() {
+        // Fetch tasks from Supabase on load
+        async function fetchTasksFromSupabase() {
+            const { data, error } = await supabase
+                .from('entrepreneur_tasks')
+                .select('*')
+                .order('id', { ascending: false });
+            if (error) {
+                console.error('Error fetching tasks:', error);
+                appState.tasks = [];
+            } else {
+                appState.tasks = data.map(row => ({
+                    id: row.id,
+                    name: row.task_name,
+                    status: row.status,
+                    priority: row.priority === 3 ? 'high' : row.priority === 2 ? 'medium' : 'low',
+                    category: row.category,
+                    deadline: row.deadline,
+                    revenue: parseFloat(row.revenue_value) || 0,
+                    notes: row.notes || '',
+                    createdAt: row.date_created,
+                    completedAt: row.date_completed,
+                    description: row.description || '',
+                    timeEstimate: row.time_estimate,
+                    timeSpent: row.time_spent,
+                    recurringType: row.recurring_type,
+                    clientName: row.client_name,
+                    projectName: row.project_name,
+                    energyLevel: row.energy_level,
+                    dateModified: row.date_modified,
+                    userId: row.user_id,
+                    attachments: row.attachments
+                }));
+            }
+        }
+
+        // Add a task to Supabase
+        async function addTaskToSupabase(task) {
+            const { data, error } = await supabase
+                .from('entrepreneur_tasks')
+                .insert([task])
+                .select();
+            if (error) {
+                showNotification('Error adding task', 'danger');
+                return null;
+            }
+            return data[0];
+        }
+
+        // Update a task in Supabase
+        async function updateTaskInSupabase(id, updates) {
+            const { data, error } = await supabase
+                .from('entrepreneur_tasks')
+                .update(updates)
+                .eq('id', id)
+                .select();
+            if (error) {
+                showNotification('Error updating task', 'danger');
+                return null;
+            }
+            return data[0];
+        }
+
+        // Delete a task from Supabase
+        async function deleteTaskFromSupabase(id) {
+            const { error } = await supabase
+                .from('entrepreneur_tasks')
+                .delete()
+                .eq('id', id);
+            if (error) {
+                showNotification('Error deleting task', 'danger');
+            }
+        }
+
+        // Override loadData to fetch from Supabase
+        async function loadData() {
+            await Promise.all([
+                fetchTasksFromSupabase(),
+                fetchClientsFromSupabase(),
+                fetchGoalsFromSupabase(),
+                fetchSettingsFromSupabase(),
+                fetchAnalyticsFromSupabase(),
+                fetchActivitiesFromSupabase()
+            ]);
+        }
+
+        // Override addTask to use Supabase
+        async function addTask() {
             const taskInput = document.getElementById('newTaskInput');
             const taskName = taskInput.value.trim();
-            
             if (!taskName) return;
 
+            // Map UI fields to Supabase schema
             const task = {
-                id: Date.now(),
-                name: taskName,
+                task_name: taskName,
+                description: '',
                 status: 'todo',
-                priority: document.getElementById('taskPriority').value,
+                priority: document.getElementById('taskPriority').value === 'high' ? 3 : document.getElementById('taskPriority').value === 'medium' ? 2 : 1,
                 category: document.getElementById('taskCategory').value,
-                deadline: document.getElementById('taskDeadline').value,
-                revenue: parseFloat(document.getElementById('taskRevenue').value) || 0,
+                deadline: document.getElementById('taskDeadline').value || null,
+                revenue_value: parseFloat(document.getElementById('taskRevenue').value) || 0,
+                time_estimate: null,
+                time_spent: 0,
+                recurring_type: null,
+                client_name: null,
+                project_name: null,
+                energy_level: null,
                 notes: document.getElementById('taskNotes').value.trim(),
-                createdAt: new Date().toISOString(),
-                completedAt: null
+                attachments: null
             };
 
-            appState.tasks.push(task);
-            saveData();
-            updateUI();
-            clearTaskForm();
-            showNotification('Task added successfully!');
-            addActivity(`Added task: ${taskName}`);
+            const newTask = await addTaskToSupabase(task);
+            if (newTask) {
+                await fetchTasksFromSupabase();
+                updateUI();
+                clearTaskForm();
+                showNotification('Task added successfully!');
+                addActivity(`Added task: ${taskName}`);
+            }
         }
 
-        function clearTaskForm() {
-            document.getElementById('newTaskInput').value = '';
-            document.getElementById('taskPriority').value = 'medium';
-            document.getElementById('taskCategory').value = 'business';
-            document.getElementById('taskDeadline').value = '';
-            document.getElementById('taskRevenue').value = '';
-            document.getElementById('taskNotes').value = '';
-        }
-
-        function toggleTaskStatus(taskId) {
+        // Override toggleTaskStatus to use Supabase
+        async function toggleTaskStatus(taskId) {
             const task = appState.tasks.find(t => t.id === taskId);
             if (!task) return;
 
+            let updates = {};
             if (task.status === 'todo') {
-                task.status = 'done';
-                task.completedAt = new Date().toISOString();
-                showNotification('Task completed!', 'success');
-                addActivity(`Completed task: ${task.name}`);
-                
-                // Celebration animation
-                const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
-                if (taskElement) {
-                    taskElement.classList.add('celebrate');
-                    setTimeout(() => {
-                        taskElement.classList.remove('celebrate');
-                    }, 600);
-                }
+                updates.status = 'done';
+                updates.date_completed = new Date().toISOString();
             } else {
-                task.status = 'todo';
-                task.completedAt = null;
-                showNotification('Task moved back to To-Do', 'info');
-                addActivity(`Moved task back to To-Do: ${task.name}`);
+                updates.status = 'todo';
+                updates.date_completed = null;
             }
-
-            saveData();
+            await updateTaskInSupabase(taskId, updates);
+            await fetchTasksFromSupabase();
             updateUI();
         }
 
+        // Override editTask and saveTaskEdit to use Supabase
         function editTask(taskId) {
             const task = appState.tasks.find(t => t.id === taskId);
             if (!task) return;
-
             appState.editingTask = task;
-            
-            // Populate edit form
             document.getElementById('editTaskName').value = task.name;
             document.getElementById('editTaskPriority').value = task.priority;
             document.getElementById('editTaskCategory').value = task.category;
             document.getElementById('editTaskDeadline').value = task.deadline || '';
             document.getElementById('editTaskRevenue').value = task.revenue || '';
             document.getElementById('editTaskNotes').value = task.notes || '';
-
-            // Show modal
             document.getElementById('taskEditModal').classList.remove('hidden');
         }
 
-        function saveTaskEdit() {
+        async function saveTaskEdit() {
             if (!appState.editingTask) return;
-
-            appState.editingTask.name = document.getElementById('editTaskName').value.trim();
-            appState.editingTask.priority = document.getElementById('editTaskPriority').value;
-            appState.editingTask.category = document.getElementById('editTaskCategory').value;
-            appState.editingTask.deadline = document.getElementById('editTaskDeadline').value;
-            appState.editingTask.revenue = parseFloat(document.getElementById('editTaskRevenue').value) || 0;
-            appState.editingTask.notes = document.getElementById('editTaskNotes').value.trim();
-
-            saveData();
-            updateUI();
-            document.getElementById('taskEditModal').classList.add('hidden');
-            showNotification('Task updated successfully!');
-            addActivity(`Updated task: ${appState.editingTask.name}`);
+            const id = appState.editingTask.id;
+            const updates = {
+                task_name: document.getElementById('editTaskName').value.trim(),
+                priority: document.getElementById('editTaskPriority').value === 'high' ? 3 : document.getElementById('editTaskPriority').value === 'medium' ? 2 : 1,
+                category: document.getElementById('editTaskCategory').value,
+                deadline: document.getElementById('editTaskDeadline').value || null,
+                revenue_value: parseFloat(document.getElementById('editTaskRevenue').value) || 0,
+                notes: document.getElementById('editTaskNotes').value.trim(),
+                date_modified: new Date().toISOString()
+            };
+            await updateTaskInSupabase(id, updates);
             appState.editingTask = null;
+            document.getElementById('taskEditModal').classList.add('hidden');
+            await fetchTasksFromSupabase();
+            updateUI();
+            showNotification('Task updated successfully!');
         }
 
-        function deleteTask(taskId) {
+        // Override deleteTask to use Supabase
+        async function deleteTask(taskId) {
             if (!confirm('Are you sure you want to delete this task?')) return;
-
-            const taskIndex = appState.tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-
-            const taskName = appState.tasks[taskIndex].name;
-            appState.tasks.splice(taskIndex, 1);
-            saveData();
+            await deleteTaskFromSupabase(taskId);
+            await fetchTasksFromSupabase();
             updateUI();
             showNotification('Task deleted', 'warning');
-            addActivity(`Deleted task: ${taskName}`);
         }
 
-        function saveClient() {
-            const name = document.getElementById('clientName').value.trim();
-            if (!name) return;
-
-            const client = {
-                id: Date.now(),
-                name: name,
-                email: document.getElementById('clientEmail').value.trim(),
-                phone: document.getElementById('clientPhone').value.trim(),
-                company: document.getElementById('clientCompany').value.trim(),
-                notes: document.getElementById('clientNotes').value.trim(),
-                createdAt: new Date().toISOString()
-            };
-
-            appState.clients.push(client);
-            saveData();
+        // On DOMContentLoaded, load tasks from Supabase
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadData();
+            setupEventListeners();
             updateUI();
-            document.getElementById('clientModal').classList.add('hidden');
-            clearClientForm();
-            showNotification('Client added successfully!');
-            addActivity(`Added client: ${name}`);
-        }
+            displayMotivationalQuote();
+            updateCurrentDate();
+            setupDarkMode();
+            makeTaskListsSortable();
+        });
 
-        function clearClientForm() {
-            document.getElementById('clientName').value = '';
-            document.getElementById('clientEmail').value = '';
-            document.getElementById('clientPhone').value = '';
-            document.getElementById('clientCompany').value = '';
-            document.getElementById('clientNotes').value = '';
-        }
-
-        function saveGoal() {
-            const title = document.getElementById('goalTitle').value.trim();
-            if (!title) return;
-
-            const goal = {
-                id: Date.now(),
-                title: title,
-                description: document.getElementById('goalDescription').value.trim(),
-                deadline: document.getElementById('goalDeadline').value,
-                target: parseFloat(document.getElementById('goalTarget').value) || 0,
-                progress: 0,
-                createdAt: new Date().toISOString()
-            };
-
-            appState.goals.push(goal);
-            saveData();
-            updateUI();
-            document.getElementById('goalModal').classList.add('hidden');
-            clearGoalForm();
-            showNotification('Goal added successfully!');
-            addActivity(`Set new goal: ${title}`);
-        }
-
-        function clearGoalForm() {
-            document.getElementById('goalTitle').value = '';
-            document.getElementById('goalDescription').value = '';
-            document.getElementById('goalDeadline').value = '';
-            document.getElementById('goalTarget').value = '';
-        }
+        // Remove all localStorage logic for tasks in saveData
+        function saveData() {}
 
         function handleQuickAction(action) {
             switch (action) {
@@ -1142,9 +1168,8 @@
 
         function updateRecentActivity() {
             const recentActivity = document.getElementById('recentActivity');
-            const activities = JSON.parse(localStorage.getItem('entrepreneurActivities')) || [];
-            
-            recentActivity.innerHTML = activities.slice(-5).reverse().map(activity => `
+            const activities = appState.activities;
+            recentActivity.innerHTML = activities.slice(0, 5).map(activity => `
                 <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <i class="fas fa-clock text-gray-400 mr-3"></i>
                     <div class="flex-1">
@@ -1156,7 +1181,7 @@
         }
 
         function addActivity(text) {
-            const activities = JSON.parse(localStorage.getItem('entrepreneurActivities')) || [];
+            const activities = appState.activities;
             activities.push({
                 text: text,
                 timestamp: new Date().toISOString()
@@ -1167,7 +1192,7 @@
                 activities.splice(0, activities.length - 50);
             }
             
-            localStorage.setItem('entrepreneurActivities', JSON.stringify(activities));
+            saveData();
         }
 
         // Timer functions
@@ -1533,54 +1558,13 @@
             }, 100);
         }
 
-        // Data persistence
-        function saveData() {
-            localStorage.setItem('entrepreneurTasks', JSON.stringify(appState.tasks));
-            localStorage.setItem('entrepreneurClients', JSON.stringify(appState.clients));
-            localStorage.setItem('entrepreneurGoals', JSON.stringify(appState.goals));
-            localStorage.setItem('entrepreneurSettings', JSON.stringify(appState.settings));
-            localStorage.setItem('entrepreneurAnalytics', JSON.stringify(appState.analytics));
-        }
-
-        function loadData() {
-            // Data is already loaded in appState initialization
-            
-            // Auto-reset done tasks at midnight
-            const lastReset = localStorage.getItem('lastReset');
-            const today = new Date().toDateString();
-            
-            if (lastReset !== today) {
-                // Move completed tasks to history
-                const completedTasks = appState.tasks.filter(t => t.status === 'done');
-                const history = JSON.parse(localStorage.getItem('taskHistory')) || [];
-                
-                completedTasks.forEach(task => {
-                    history.push({
-                        ...task,
-                        archivedDate: new Date().toISOString()
-                    });
-                });
-                
-                // Remove completed tasks from main list
-                appState.tasks = appState.tasks.filter(t => t.status !== 'done');
-                
-                // Reset daily analytics
-                appState.analytics.focusTimeToday = 0;
-                
-                localStorage.setItem('taskHistory', JSON.stringify(history));
-                localStorage.setItem('lastReset', today);
-                saveData();
-            }
-        }
-
         function exportData() {
             const exportData = {
                 tasks: appState.tasks,
                 clients: appState.clients,
                 goals: appState.goals,
                 analytics: appState.analytics,
-                history: JSON.parse(localStorage.getItem('taskHistory')) || [],
-                activities: JSON.parse(localStorage.getItem('entrepreneurActivities')) || [],
+                history: appState.activities,
                 exportDate: new Date().toISOString()
             };
             
@@ -1678,6 +1662,205 @@
                 // This would be implemented for full PWA support
             });
         }
+
+        // --- CLIENTS CRUD ---
+        async function fetchClientsFromSupabase() {
+            const { data, error } = await supabase
+                .from('entrepreneur_clients')
+                .select('*')
+                .order('id', { ascending: false });
+            appState.clients = error ? [] : data;
+        }
+        async function addClientToSupabase(client) {
+            const { data, error } = await supabase
+                .from('entrepreneur_clients')
+                .insert([client])
+                .select();
+            return error ? null : data[0];
+        }
+        async function deleteClientFromSupabase(id) {
+            await supabase.from('entrepreneur_clients').delete().eq('id', id);
+        }
+
+        // --- GOALS CRUD ---
+        async function fetchGoalsFromSupabase() {
+            const { data, error } = await supabase
+                .from('entrepreneur_goals')
+                .select('*')
+                .order('id', { ascending: false });
+            appState.goals = error ? [] : data;
+        }
+        async function addGoalToSupabase(goal) {
+            const { data, error } = await supabase
+                .from('entrepreneur_goals')
+                .insert([goal])
+                .select();
+            return error ? null : data[0];
+        }
+        async function updateGoalInSupabase(id, updates) {
+            await supabase.from('entrepreneur_goals').update(updates).eq('id', id);
+        }
+        async function deleteGoalFromSupabase(id) {
+            await supabase.from('entrepreneur_goals').delete().eq('id', id);
+        }
+
+        // --- SETTINGS CRUD (single row) ---
+        async function fetchSettingsFromSupabase() {
+            const { data } = await supabase.from('entrepreneur_settings').select('*').limit(1);
+            appState.settings = data && data[0] ? { darkMode: !!data[0].dark_mode } : { darkMode: false };
+        }
+        async function updateSettingsInSupabase(updates) {
+            const { data } = await supabase.from('entrepreneur_settings').select('id').limit(1);
+            if (data && data[0]) {
+                await supabase.from('entrepreneur_settings').update(updates).eq('id', data[0].id);
+            } else {
+                await supabase.from('entrepreneur_settings').insert([updates]);
+            }
+        }
+
+        // --- ANALYTICS CRUD (single row) ---
+        async function fetchAnalyticsFromSupabase() {
+            const { data } = await supabase.from('entrepreneur_analytics').select('*').limit(1);
+            appState.analytics = data && data[0] ? data[0] : { focusTime: 0, streakDays: 0, monthlyRevenue: 0 };
+        }
+        async function updateAnalyticsInSupabase(updates) {
+            const { data } = await supabase.from('entrepreneur_analytics').select('id').limit(1);
+            if (data && data[0]) {
+                await supabase.from('entrepreneur_analytics').update(updates).eq('id', data[0].id);
+            } else {
+                await supabase.from('entrepreneur_analytics').insert([updates]);
+            }
+        }
+
+        // --- ACTIVITIES CRUD ---
+        async function fetchActivitiesFromSupabase() {
+            const { data, error } = await supabase
+                .from('entrepreneur_activities')
+                .select('*')
+                .order('timestamp', { ascending: false })
+                .limit(50);
+            appState.activities = error ? [] : data;
+        }
+        async function addActivityToSupabase(text) {
+            await supabase.from('entrepreneur_activities').insert([{ text }]);
+        }
+
+        // --- CLIENTS UI HOOKS ---
+        async function saveClient() {
+            const name = document.getElementById('clientName').value.trim();
+            if (!name) return;
+            const client = {
+                name,
+                email: document.getElementById('clientEmail').value.trim(),
+                phone: document.getElementById('clientPhone').value.trim(),
+                company: document.getElementById('clientCompany').value.trim(),
+                notes: document.getElementById('clientNotes').value.trim()
+            };
+            await addClientToSupabase(client);
+            document.getElementById('clientModal').classList.add('hidden');
+            clearClientForm();
+            showNotification('Client added successfully!');
+            await fetchClientsFromSupabase();
+            updateUI();
+            await addActivityToSupabase(`Added client: ${name}`);
+        }
+        async function deleteClient(clientId) {
+            if (!confirm('Are you sure you want to delete this client?')) return;
+            await deleteClientFromSupabase(clientId);
+            await fetchClientsFromSupabase();
+            updateUI();
+            showNotification('Client deleted', 'warning');
+            await addActivityToSupabase('Deleted client');
+        }
+
+        // --- GOALS UI HOOKS ---
+        async function saveGoal() {
+            const title = document.getElementById('goalTitle').value.trim();
+            if (!title) return;
+            const goal = {
+                title,
+                description: document.getElementById('goalDescription').value.trim(),
+                deadline: document.getElementById('goalDeadline').value,
+                target: parseFloat(document.getElementById('goalTarget').value) || 0,
+                progress: 0
+            };
+            await addGoalToSupabase(goal);
+            document.getElementById('goalModal').classList.add('hidden');
+            clearGoalForm();
+            showNotification('Goal added successfully!');
+            await fetchGoalsFromSupabase();
+            updateUI();
+            await addActivityToSupabase(`Set new goal: ${title}`);
+        }
+        async function deleteGoal(goalId) {
+            if (!confirm('Are you sure you want to delete this goal?')) return;
+            await deleteGoalFromSupabase(goalId);
+            await fetchGoalsFromSupabase();
+            updateUI();
+            showNotification('Goal deleted', 'warning');
+            await addActivityToSupabase('Deleted goal');
+        }
+        async function updateGoalProgress(goalId) {
+            const goal = appState.goals.find(g => g.id === goalId);
+            if (!goal) return;
+            const newProgress = prompt(`Update progress for "${goal.title}" (current: ${goal.progress}):`, goal.progress);
+            if (newProgress === null) return;
+            const progress = parseFloat(newProgress);
+            if (isNaN(progress)) return;
+            await updateGoalInSupabase(goalId, { progress: Math.max(0, progress) });
+            await fetchGoalsFromSupabase();
+            updateUI();
+            showNotification('Goal progress updated!');
+            await addActivityToSupabase(`Updated progress for goal: ${goal.title}`);
+        }
+
+        // --- SETTINGS UI HOOKS ---
+        async function setupDarkMode() {
+            if (appState.settings.darkMode) {
+                document.documentElement.classList.add('dark');
+                document.querySelector('.dark-mode-text').textContent = 'Light Mode';
+            }
+        }
+        async function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            appState.settings.darkMode = !appState.settings.darkMode;
+            const modeText = document.querySelector('.dark-mode-text');
+            modeText.textContent = appState.settings.darkMode ? 'Light Mode' : 'Dark Mode';
+            await updateSettingsInSupabase({ dark_mode: appState.settings.darkMode });
+            // Reinitialize charts for theme change
+            setTimeout(() => {
+                if (appState.currentView === 'analytics') {
+                    initializeCharts();
+                }
+            }, 100);
+        }
+
+        // --- ANALYTICS UI HOOKS ---
+        async function addRevenue(amount) {
+            appState.analytics.monthlyRevenue = (appState.analytics.monthlyRevenue || 0) + amount;
+            await updateAnalyticsInSupabase({ monthly_revenue: appState.analytics.monthlyRevenue });
+            updateUI();
+            showNotification(`Added $${amount} to monthly revenue!`);
+            await addActivityToSupabase(`Added revenue: $${amount}`);
+        }
+
+        // --- ACTIVITIES UI HOOKS ---
+        function updateRecentActivity() {
+            const recentActivity = document.getElementById('recentActivity');
+            const activities = appState.activities;
+            recentActivity.innerHTML = activities.slice(0, 5).map(activity => `
+                <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <i class="fas fa-clock text-gray-400 mr-3"></i>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-800 dark:text-white">${activity.text}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">${formatDateTime(activity.timestamp)}</p>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-gray-500 dark:text-gray-400 text-center py-4">No recent activity</p>';
+        }
+
+        // --- OVERRIDE saveData TO DO NOTHING ---
+        function saveData() {}
     </script>
 </body>
 </html>
