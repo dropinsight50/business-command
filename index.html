@@ -572,16 +572,16 @@
             });
 
             // Task management
-            document.getElementById('addTaskBtn').addEventListener('click', addTask);
-            document.getElementById('newTaskInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') addTask();
+            document.getElementById('addTaskBtn').addEventListener('click', async (e) => { await addTask(e); });
+            document.getElementById('newTaskInput').addEventListener('keypress', async (e) => {
+                if (e.key === 'Enter') await addTask(e);
             });
 
             // Quick actions
             document.querySelectorAll('.quick-action-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
+                btn.addEventListener('click', async (e) => {
                     const action = e.currentTarget.getAttribute('data-action');
-                    handleQuickAction(action);
+                    await handleQuickAction(action);
                 });
             });
 
@@ -592,10 +592,10 @@
             });
 
             // Dark mode toggle
-            document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
+            document.getElementById('darkModeToggle').addEventListener('click', async () => { await toggleDarkMode(); });
 
             // Export data
-            document.getElementById('exportData').addEventListener('click', exportData);
+            document.getElementById('exportData').addEventListener('click', async () => { await exportData(); });
 
             // Modal handlers
             setupModalHandlers();
@@ -606,7 +606,7 @@
 
         function setupModalHandlers() {
             // Task edit modal
-            document.getElementById('saveTaskEdit').addEventListener('click', saveTaskEdit);
+            document.getElementById('saveTaskEdit').addEventListener('click', async (e) => { await saveTaskEdit(e); });
             document.getElementById('cancelTaskEdit').addEventListener('click', () => {
                 document.getElementById('taskEditModal').classList.add('hidden');
             });
@@ -615,7 +615,7 @@
             document.getElementById('addClientBtn').addEventListener('click', () => {
                 document.getElementById('clientModal').classList.remove('hidden');
             });
-            document.getElementById('saveClient').addEventListener('click', saveClient);
+            document.getElementById('saveClient').addEventListener('click', async (e) => { await saveClient(e); });
             document.getElementById('cancelClient').addEventListener('click', () => {
                 document.getElementById('clientModal').classList.add('hidden');
             });
@@ -624,7 +624,7 @@
             document.getElementById('addGoalBtn').addEventListener('click', () => {
                 document.getElementById('goalModal').classList.remove('hidden');
             });
-            document.getElementById('saveGoal').addEventListener('click', saveGoal);
+            document.getElementById('saveGoal').addEventListener('click', async (e) => { await saveGoal(e); });
             document.getElementById('cancelGoal').addEventListener('click', () => {
                 document.getElementById('goalModal').classList.add('hidden');
             });
