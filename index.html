@@ -505,7 +505,7 @@
         // Supabase initialization
         const SUPABASE_URL = 'https://ywoqlbzrksjjcwodxxkn.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3b3FsYnpya3NqamN3b2R4eGtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2MjQyMzUsImV4cCI6MjA2NzIwMDIzNX0.FqBBYhI9X5xfQLbwnX9OGcJYXr0tRX9X5I8bTvA91Ak';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Application State
         let appState = {
@@ -1861,6 +1861,18 @@
 
         // --- OVERRIDE saveData TO DO NOTHING ---
         function saveData() {}
+
+        // At the end of your main <script> block, add:
+        window.addTask = addTask;
+        window.editTask = editTask;
+        window.deleteTask = deleteTask;
+        window.toggleTaskStatus = toggleTaskStatus;
+        window.saveTaskEdit = saveTaskEdit;
+        window.saveClient = saveClient;
+        window.deleteClient = deleteClient;
+        window.saveGoal = saveGoal;
+        window.deleteGoal = deleteGoal;
+        window.updateGoalProgress = updateGoalProgress;
     </script>
 </body>
 </html>
