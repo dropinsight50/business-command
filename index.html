@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EntrepreneurFocus Pro - Advanced Business Task Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-bg: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-bg: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-bg: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .dark {
+            --primary-bg: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            --secondary-bg: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        }
+
+        .gradient-primary { background: var(--primary-bg); }
+        .gradient-secondary { background: var(--secondary-bg); }
+        .gradient-success { background: var(--success-bg); }
+        .gradient-warning { background: var(--warning-bg); }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .task-item {
+            transition: all 0.3s ease;
+        }
+
+        .task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .priority-high { border-left: 4px solid #ef4444; }
+        .priority-medium { border-left: 4px solid #f59e0b; }
+        .priority-low { border-left: 4px solid #10b981; }
+
+        .category-business { background: linear-gradient(45deg, #667eea, #764ba2); }
+        .category-personal { background: linear-gradient(45deg, #f093fb, #f5576c); }
+        .category-finance { background: linear-gradient(45deg, #4facfe, #00f2fe); }
+        .category-marketing { background: linear-gradient(45deg, #fa709a, #fee140); }
+        .category-development { background: linear-gradient(45deg, #a8edea, #fed6e3); }
+
+        .timer-circle {
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 1s linear;
+        }
+
+        @keyframes celebration {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .celebrate {
+            animation: celebration 0.6s ease-in-out;
+        }
+
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-closed {
+                transform: translateX(-100%);
+            }
+        }
+
+        .floating-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300 font-sans">
+    <!-- Notification System -->
+    <div id="notification" class="notification bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span id="notificationText">Task completed!</span>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <button id="mobileMenuToggle" class="md:hidden fixed top-4 left-4 z-50 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg">
+        <i class="fas fa-bars text-gray-700 dark:text-gray-300"></i>
+    </button>
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar-transition w-64 bg-white dark:bg-gray-800 shadow-xl flex flex-col">
+            <div class="gradient-primary p-6 text-white">
+                <h1 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-rocket mr-3"></i>
+                    EntrepreneurFocus Pro
+                </h1>
+                <p class="text-sm opacity-80 mt-2">Your Business Command Center</p>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4">
+                <div class="space-y-2">
+                    <button class="nav-item w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center" data-view="dashboard">
+                        <i class="fas fa-tachometer-alt mr-3 text-blue-500"></i>
+                        Dashboard
+                    </button>
+                    <button class="nav-item w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center" data-view="tasks">
+                        <i class="fas fa-tasks mr-3 text-green-500"></i>
+                        Tasks
+                    </button>
+                    <button class="nav-item w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center" data-view="analytics">
+                        <i class="fas fa-chart-line mr-3 text-purple-500"></i>
+                        Analytics
+                    </button>
+                    <button class="nav-item w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center" data-view="clients">
+                        <i class="fas fa-users mr-3 text-orange-500"></i>
+                        Clients
+                    </button>
+                    <button class="nav-item w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center" data-view="goals">
+                        <i class="fas fa-bullseye mr-3 text-red-500"></i>
+                        Goals
+                    </button>
+                    <button class="nav-item w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center" data-view="timer">
+                        <i class="fas fa-clock mr-3 text-indigo-500"></i>
+                        Focus Timer
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Settings -->
+            <div class="p-4 border-t dark:border-gray-700">
+                <button id="darkModeToggle" class="w-full p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center">
+                    <i class="fas fa-moon mr-3 text-yellow-500"></i>
+                    <span class="dark-mode-text">Dark Mode</span>
+                </button>
+                <button id="exportData" class="w-full p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center mt-2">
+                    <i class="fas fa-download mr-3 text-blue-500"></i>
+                    Export Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-hidden">
+            <!-- Header -->
+            <header class="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 p-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 id="viewTitle" class="text-2xl font-bold text-gray-800 dark:text-white">Dashboard</h2>
+                        <div id="motivationalQuote" class="text-sm text-gray-600 dark:text-gray-400 mt-1"></div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Today</div>
+                            <div id="currentDate" class="text-lg font-semibold text-gray-800 dark:text-white"></div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Streak</div>
+                            <div id="streak" class="text-lg font-semibold text-green-500">0 days</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="h-full overflow-y-auto p-6">
+                <!-- Dashboard View -->
+                <div id="dashboardView" class="view-content">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <!-- Stats Cards -->
+                        <div class="glass-effect rounded-xl p-6 text-white gradient-primary">
+                            <div class="flex items-center">
+                                <i class="fas fa-tasks text-2xl mr-4"></i>
+                                <div>
+                                    <div class="text-sm opacity-80">Total Tasks</div>
+                                    <div id="totalTasks" class="text-2xl font-bold">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-effect rounded-xl p-6 text-white gradient-success">
+                            <div class="flex items-center">
+                                <i class="fas fa-check-circle text-2xl mr-4"></i>
+                                <div>
+                                    <div class="text-sm opacity-80">Completed Today</div>
+                                    <div id="completedToday" class="text-2xl font-bold">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-effect rounded-xl p-6 text-white gradient-warning">
+                            <div class="flex items-center">
+                                <i class="fas fa-dollar-sign text-2xl mr-4"></i>
+                                <div>
+                                    <div class="text-sm opacity-80">Revenue This Month</div>
+                                    <div id="monthlyRevenue" class="text-2xl font-bold">$0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-effect rounded-xl p-6 text-white gradient-secondary">
+                            <div class="flex items-center">
+                                <i class="fas fa-clock text-2xl mr-4"></i>
+                                <div>
+                                    <div class="text-sm opacity-80">Focus Time Today</div>
+                                    <div id="focusTimeToday" class="text-2xl font-bold">0h 0m</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Quick Actions</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <button class="quick-action-btn gradient-primary text-white p-4 rounded-lg hover:shadow-lg transition-all" data-action="addTask">
+                                <i class="fas fa-plus text-2xl mb-2"></i>
+                                <div class="text-sm">Add Task</div>
+                            </button>
+                            <button class="quick-action-btn gradient-success text-white p-4 rounded-lg hover:shadow-lg transition-all" data-action="startTimer">
+                                <i class="fas fa-play text-2xl mb-2"></i>
+                                <div class="text-sm">Start Timer</div>
+                            </button>
+                            <button class="quick-action-btn gradient-warning text-white p-4 rounded-lg hover:shadow-lg transition-all" data-action="addRevenue">
+                                <i class="fas fa-dollar-sign text-2xl mb-2"></i>
+                                <div class="text-sm">Add Revenue</div>
+                            </button>
+                            <button class="quick-action-btn gradient-secondary text-white p-4 rounded-lg hover:shadow-lg transition-all" data-action="addClient">
+                                <i class="fas fa-user-plus text-2xl mb-2"></i>
+                                <div class="text-sm">Add Client</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Recent Activity</h3>
+                        <div id="recentActivity" class="space-y-3">
+                            <!-- Activity items will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tasks View -->
+                <div id="tasksView" class="view-content hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- To-Do Section -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+                            <div class="p-6 border-b dark:border-gray-700">
+                                <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+                                    <i class="fas fa-list-ul mr-3 text-blue-500"></i>
+                                    To-Do List
+                                    <span id="todoCount" class="ml-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">0</span>
+                                </h3>
+                            </div>
+                            <div class="p-6">
+                                <!-- Add Task Form -->
+                                <div class="mb-6">
+                                    <div class="flex flex-col space-y-3">
+                                        <input type="text" id="newTaskInput" placeholder="Add a new task..." class="w-full p-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                                        <div class="flex flex-wrap gap-2">
+                                            <select id="taskPriority" class="p-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                                <option value="low">Low Priority</option>
+                                                <option value="medium" selected>Medium Priority</option>
+                                                <option value="high">High Priority</option>
+                                            </select>
+                                            <select id="taskCategory" class="p-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                                <option value="business">Business</option>
+                                                <option value="personal">Personal</option>
+                                                <option value="finance">Finance</option>
+                                                <option value="marketing">Marketing</option>
+                                                <option value="development">Development</option>
+                                            </select>
+                                            <input type="date" id="taskDeadline" class="p-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                            <input type="number" id="taskRevenue" placeholder="Revenue $" class="p-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                        </div>
+                                        <textarea id="taskNotes" placeholder="Notes (optional)" class="w-full p-3 border dark:border-gray-600 rounded-lg h-20 resize-none dark:bg-gray-700 dark:text-white"></textarea>
+                                        <button id="addTaskBtn" class="gradient-primary text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all flex items-center justify-center">
+                                            <i class="fas fa-plus mr-2"></i>
+                                            Add Task
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Tasks List -->
+                                <div id="todoList" class="space-y-3 max-h-96 overflow-y-auto">
+                                    <!-- Tasks will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Done Section -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+                            <div class="p-6 border-b dark:border-gray-700">
+                                <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+                                    <i class="fas fa-check-circle mr-3 text-green-500"></i>
+                                    Completed Today
+                                    <span id="doneCount" class="ml-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">0</span>
+                                </h3>
+                            </div>
+                            <div class="p-6">
+                                <div id="doneList" class="space-y-3 max-h-96 overflow-y-auto">
+                                    <!-- Completed tasks will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics View -->
+                <div id="analyticsView" class="view-content hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Task Completion Trend</h3>
+                            <canvas id="completionChart" style="height: 300px;"></canvas>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Category Distribution</h3>
+                            <canvas id="categoryChart" style="height: 300px;"></canvas>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Revenue Tracking</h3>
+                            <canvas id="revenueChart" style="height: 300px;"></canvas>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Focus Time Analysis</h3>
+                            <canvas id="focusChart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clients View -->
+                <div id="clientsView" class="view-content hidden">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-gray-800 dark:text-white">Client Management</h3>
+                            <button id="addClientBtn" class="gradient-primary text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all">
+                                <i class="fas fa-plus mr-2"></i>Add Client
+                            </button>
+                        </div>
+                        <div id="clientsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Clients will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Goals View -->
+                <div id="goalsView" class="view-content hidden">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-gray-800 dark:text-white">Goals & Milestones</h3>
+                            <button id="addGoalBtn" class="gradient-primary text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all">
+                                <i class="fas fa-plus mr-2"></i>Add Goal
+                            </button>
+                        </div>
+                        <div id="goalsList" class="space-y-6">
+                            <!-- Goals will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timer View -->
+                <div id="timerView" class="view-content hidden">
+                    <div class="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center">
+                        <h3 class="text-2xl font-bold mb-8 text-gray-800 dark:text-white">Focus Timer</h3>
+                        
+                        <!-- Timer Circle -->
+                        <div class="relative w-64 h-64 mx-auto mb-8">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="2" fill="none" class="text-gray-300 dark:text-gray-600"/>
+                                <circle id="timerCircle" cx="50" cy="50" r="45" stroke="currentColor" stroke-width="2" fill="none" class="text-blue-500 timer-circle"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <div id="timerDisplay" class="text-4xl font-bold text-gray-800 dark:text-white">25:00</div>
+                                    <div id="timerLabel" class="text-sm text-gray-500 dark:text-gray-400">Focus Time</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timer Controls -->
+                        <div class="flex justify-center space-x-4 mb-6">
+                            <button id="startTimerBtn" class="gradient-primary text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all">
+                                <i class="fas fa-play mr-2"></i>Start
+                            </button>
+                            <button id="pauseTimerBtn" class="bg-gray-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all" disabled>
+                                <i class="fas fa-pause mr-2"></i>Pause
+                            </button>
+                            <button id="resetTimerBtn" class="bg-red-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all">
+                                <i class="fas fa-stop mr-2"></i>Reset
+                            </button>
+                        </div>
+
+                        <!-- Timer Presets -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="timer-preset p-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-minutes="25">25m Focus</button>
+                            <button class="timer-preset p-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-minutes="5">5m Break</button>
+                            <button class="timer-preset p-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-minutes="15">15m Break</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Floating Add Button -->
+    <button id="floatingAddBtn" class="floating-btn bg-blue-500 hover:bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all">
+        <i class="fas fa-plus text-xl"></i>
+    </button>
+
+    <!-- Modals -->
+    <!-- Task Edit Modal -->
+    <div id="taskEditModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit Task</h3>
+            <div class="space-y-4">
+                <input type="text" id="editTaskName" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <select id="editTaskPriority" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                </select>
+                <select id="editTaskCategory" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    <option value="business">Business</option>
+                    <option value="personal">Personal</option>
+                    <option value="finance">Finance</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="development">Development</option>
+                </select>
+                <input type="date" id="editTaskDeadline" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <input type="number" id="editTaskRevenue" placeholder="Revenue $" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <textarea id="editTaskNotes" placeholder="Notes" class="w-full p-3 border dark:border-gray-600 rounded-lg h-20 resize-none dark:bg-gray-700 dark:text-white"></textarea>
+                <div class="flex space-x-3">
+                    <button id="saveTaskEdit" class="flex-1 gradient-primary text-white py-3 rounded-lg hover:shadow-lg transition-all">Save</button>
+                    <button id="cancelTaskEdit" class="flex-1 bg-gray-500 text-white py-3 rounded-lg hover:shadow-lg transition-all">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Add Modal -->
+    <div id="clientModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Add Client</h3>
+            <div class="space-y-4">
+                <input type="text" id="clientName" placeholder="Client Name" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <input type="email" id="clientEmail" placeholder="Email" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <input type="tel" id="clientPhone" placeholder="Phone" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <input type="text" id="clientCompany" placeholder="Company" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <textarea id="clientNotes" placeholder="Notes" class="w-full p-3 border dark:border-gray-600 rounded-lg h-20 resize-none dark:bg-gray-700 dark:text-white"></textarea>
+                <div class="flex space-x-3">
+                    <button id="saveClient" class="flex-1 gradient-primary text-white py-3 rounded-lg hover:shadow-lg transition-all">Save</button>
+                    <button id="cancelClient" class="flex-1 bg-gray-500 text-white py-3 rounded-lg hover:shadow-lg transition-all">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal Modal -->
+    <div id="goalModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Add Goal</h3>
+            <div class="space-y-4">
+                <input type="text" id="goalTitle" placeholder="Goal Title" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <textarea id="goalDescription" placeholder="Description" class="w-full p-3 border dark:border-gray-600 rounded-lg h-20 resize-none dark:bg-gray-700 dark:text-white"></textarea>
+                <input type="date" id="goalDeadline" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <input type="number" id="goalTarget" placeholder="Target Value" class="w-full p-3 border dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <div class="flex space-x-3">
+                    <button id="saveGoal" class="flex-1 gradient-primary text-white py-3 rounded-lg hover:shadow-lg transition-all">Save</button>
+                    <button id="cancelGoal" class="flex-1 bg-gray-500 text-white py-3 rounded-lg hover:shadow-lg transition-all">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        let appState = {
+            tasks: JSON.parse(localStorage.getItem('entrepreneurTasks')) || [],
+            clients: JSON.parse(localStorage.getItem('entrepreneurClients')) || [],
+            goals: JSON.parse(localStorage.getItem('entrepreneurGoals')) || [],
+            settings: JSON.parse(localStorage.getItem('entrepreneurSettings')) || { darkMode: false },
+            analytics: JSON.parse(localStorage.getItem('entrepreneurAnalytics')) || { focusTime: 0, streakDays: 0 },
+            currentView: 'dashboard',
+            editingTask: null,
+            timer: { minutes: 25, seconds: 0, isRunning: false, interval: null, type: 'focus' }
+        };
+
+        // Motivational quotes
+        const quotes = [
+            "The way to get started is to quit talking and begin doing. - Walt Disney",
+            "Innovation distinguishes between a leader and a follower. - Steve Jobs",
+            "Your limitation—it's only your imagination.",
+            "Push yourself, because no one else is going to do it for you.",
+            "Great things never come from comfort zones.",
+            "Dream it. Wish it. Do it.",
+            "Success doesn't just find you. You have to go out and get it.",
+            "The harder you work for something, the greater you'll feel when you achieve it.",
+            "Dream bigger. Do bigger.",
+            "Don't stop when you're tired. Stop when you're done."
+        ];
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+            loadData();
+            updateUI();
+            displayMotivationalQuote();
+            updateCurrentDate();
+            setupDarkMode();
+            makeTaskListsSortable();
+        });
+
+        function initializeApp() {
+            // Set default view
+            showView('dashboard');
+            
+            // Initialize charts
+            setTimeout(() => {
+                initializeCharts();
+            }, 100);
+        }
+
+        function setupEventListeners() {
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const view = e.currentTarget.getAttribute('data-view');
+                    showView(view);
+                });
+            });
+
+            // Mobile menu toggle
+            document.getElementById('mobileMenuToggle').addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('sidebar-closed');
+            });
+
+            // Task management
+            document.getElementById('addTaskBtn').addEventListener('click', addTask);
+            document.getElementById('newTaskInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addTask();
+            });
+
+            // Quick actions
+            document.querySelectorAll('.quick-action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const action = e.currentTarget.getAttribute('data-action');
+                    handleQuickAction(action);
+                });
+            });
+
+            // Floating add button
+            document.getElementById('floatingAddBtn').addEventListener('click', () => {
+                showView('tasks');
+                document.getElementById('newTaskInput').focus();
+            });
+
+            // Dark mode toggle
+            document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
+
+            // Export data
+            document.getElementById('exportData').addEventListener('click', exportData);
+
+            // Modal handlers
+            setupModalHandlers();
+
+            // Timer handlers
+            setupTimerHandlers();
+        }
+
+        function setupModalHandlers() {
+            // Task edit modal
+            document.getElementById('saveTaskEdit').addEventListener('click', saveTaskEdit);
+            document.getElementById('cancelTaskEdit').addEventListener('click', () => {
+                document.getElementById('taskEditModal').classList.add('hidden');
+            });
+
+            // Client modal
+            document.getElementById('addClientBtn').addEventListener('click', () => {
+                document.getElementById('clientModal').classList.remove('hidden');
+            });
+            document.getElementById('saveClient').addEventListener('click', saveClient);
+            document.getElementById('cancelClient').addEventListener('click', () => {
+                document.getElementById('clientModal').classList.add('hidden');
+            });
+
+            // Goal modal
+            document.getElementById('addGoalBtn').addEventListener('click', () => {
+                document.getElementById('goalModal').classList.remove('hidden');
+            });
+            document.getElementById('saveGoal').addEventListener('click', saveGoal);
+            document.getElementById('cancelGoal').addEventListener('click', () => {
+                document.getElementById('goalModal').classList.add('hidden');
+            });
+
+            // Close modals on outside click
+            document.querySelectorAll('.fixed.inset-0').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            });
+        }
+
+        function setupTimerHandlers() {
+            document.getElementById('startTimerBtn').addEventListener('click', startTimer);
+            document.getElementById('pauseTimerBtn').addEventListener('click', pauseTimer);
+            document.getElementById('resetTimerBtn').addEventListener('click', resetTimer);
+
+            document.querySelectorAll('.timer-preset').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const minutes = parseInt(e.target.getAttribute('data-minutes'));
+                    setTimerMinutes(minutes);
+                });
+            });
+        }
+
+        function showView(viewName) {
+            // Hide all views
+            document.querySelectorAll('.view-content').forEach(view => {
+                view.classList.add('hidden');
+            });
+
+            // Show selected view
+            document.getElementById(viewName + 'View').classList.remove('hidden');
+
+            // Update title
+            const titles = {
+                dashboard: 'Dashboard',
+                tasks: 'Task Management',
+                analytics: 'Analytics',
+                clients: 'Client Management',
+                goals: 'Goals & Milestones',
+                timer: 'Focus Timer'
+            };
+            document.getElementById('viewTitle').textContent = titles[viewName];
+
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('bg-blue-100', 'dark:bg-blue-900');
+                if (item.getAttribute('data-view') === viewName) {
+                    item.classList.add('bg-blue-100', 'dark:bg-blue-900');
+                }
+            });
+
+            appState.currentView = viewName;
+
+            // Close mobile menu
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('sidebar-closed');
+            }
+
+            // Refresh charts if analytics view
+            if (viewName === 'analytics') {
+                setTimeout(() => {
+                    initializeCharts();
+                }, 100);
+            }
+        }
+
+        function addTask() {
+            const taskInput = document.getElementById('newTaskInput');
+            const taskName = taskInput.value.trim();
+            
+            if (!taskName) return;
+
+            const task = {
+                id: Date.now(),
+                name: taskName,
+                status: 'todo',
+                priority: document.getElementById('taskPriority').value,
+                category: document.getElementById('taskCategory').value,
+                deadline: document.getElementById('taskDeadline').value,
+                revenue: parseFloat(document.getElementById('taskRevenue').value) || 0,
+                notes: document.getElementById('taskNotes').value.trim(),
+                createdAt: new Date().toISOString(),
+                completedAt: null
+            };
+
+            appState.tasks.push(task);
+            saveData();
+            updateUI();
+            clearTaskForm();
+            showNotification('Task added successfully!');
+            addActivity(`Added task: ${taskName}`);
+        }
+
+        function clearTaskForm() {
+            document.getElementById('newTaskInput').value = '';
+            document.getElementById('taskPriority').value = 'medium';
+            document.getElementById('taskCategory').value = 'business';
+            document.getElementById('taskDeadline').value = '';
+            document.getElementById('taskRevenue').value = '';
+            document.getElementById('taskNotes').value = '';
+        }
+
+        function toggleTaskStatus(taskId) {
+            const task = appState.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            if (task.status === 'todo') {
+                task.status = 'done';
+                task.completedAt = new Date().toISOString();
+                showNotification('Task completed!', 'success');
+                addActivity(`Completed task: ${task.name}`);
+                
+                // Celebration animation
+                const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (taskElement) {
+                    taskElement.classList.add('celebrate');
+                    setTimeout(() => {
+                        taskElement.classList.remove('celebrate');
+                    }, 600);
+                }
+            } else {
+                task.status = 'todo';
+                task.completedAt = null;
+                showNotification('Task moved back to To-Do', 'info');
+                addActivity(`Moved task back to To-Do: ${task.name}`);
+            }
+
+            saveData();
+            updateUI();
+        }
+
+        function editTask(taskId) {
+            const task = appState.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            appState.editingTask = task;
+            
+            // Populate edit form
+            document.getElementById('editTaskName').value = task.name;
+            document.getElementById('editTaskPriority').value = task.priority;
+            document.getElementById('editTaskCategory').value = task.category;
+            document.getElementById('editTaskDeadline').value = task.deadline || '';
+            document.getElementById('editTaskRevenue').value = task.revenue || '';
+            document.getElementById('editTaskNotes').value = task.notes || '';
+
+            // Show modal
+            document.getElementById('taskEditModal').classList.remove('hidden');
+        }
+
+        function saveTaskEdit() {
+            if (!appState.editingTask) return;
+
+            appState.editingTask.name = document.getElementById('editTaskName').value.trim();
+            appState.editingTask.priority = document.getElementById('editTaskPriority').value;
+            appState.editingTask.category = document.getElementById('editTaskCategory').value;
+            appState.editingTask.deadline = document.getElementById('editTaskDeadline').value;
+            appState.editingTask.revenue = parseFloat(document.getElementById('editTaskRevenue').value) || 0;
+            appState.editingTask.notes = document.getElementById('editTaskNotes').value.trim();
+
+            saveData();
+            updateUI();
+            document.getElementById('taskEditModal').classList.add('hidden');
+            showNotification('Task updated successfully!');
+            addActivity(`Updated task: ${appState.editingTask.name}`);
+            appState.editingTask = null;
+        }
+
+        function deleteTask(taskId) {
+            if (!confirm('Are you sure you want to delete this task?')) return;
+
+            const taskIndex = appState.tasks.findIndex(t => t.id === taskId);
+            if (taskIndex === -1) return;
+
+            const taskName = appState.tasks[taskIndex].name;
+            appState.tasks.splice(taskIndex, 1);
+            saveData();
+            updateUI();
+            showNotification('Task deleted', 'warning');
+            addActivity(`Deleted task: ${taskName}`);
+        }
+
+        function saveClient() {
+            const name = document.getElementById('clientName').value.trim();
+            if (!name) return;
+
+            const client = {
+                id: Date.now(),
+                name: name,
+                email: document.getElementById('clientEmail').value.trim(),
+                phone: document.getElementById('clientPhone').value.trim(),
+                company: document.getElementById('clientCompany').value.trim(),
+                notes: document.getElementById('clientNotes').value.trim(),
+                createdAt: new Date().toISOString()
+            };
+
+            appState.clients.push(client);
+            saveData();
+            updateUI();
+            document.getElementById('clientModal').classList.add('hidden');
+            clearClientForm();
+            showNotification('Client added successfully!');
+            addActivity(`Added client: ${name}`);
+        }
+
+        function clearClientForm() {
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientEmail').value = '';
+            document.getElementById('clientPhone').value = '';
+            document.getElementById('clientCompany').value = '';
+            document.getElementById('clientNotes').value = '';
+        }
+
+        function saveGoal() {
+            const title = document.getElementById('goalTitle').value.trim();
+            if (!title) return;
+
+            const goal = {
+                id: Date.now(),
+                title: title,
+                description: document.getElementById('goalDescription').value.trim(),
+                deadline: document.getElementById('goalDeadline').value,
+                target: parseFloat(document.getElementById('goalTarget').value) || 0,
+                progress: 0,
+                createdAt: new Date().toISOString()
+            };
+
+            appState.goals.push(goal);
+            saveData();
+            updateUI();
+            document.getElementById('goalModal').classList.add('hidden');
+            clearGoalForm();
+            showNotification('Goal added successfully!');
+            addActivity(`Set new goal: ${title}`);
+        }
+
+        function clearGoalForm() {
+            document.getElementById('goalTitle').value = '';
+            document.getElementById('goalDescription').value = '';
+            document.getElementById('goalDeadline').value = '';
+            document.getElementById('goalTarget').value = '';
+        }
+
+        function handleQuickAction(action) {
+            switch (action) {
+                case 'addTask':
+                    showView('tasks');
+                    document.getElementById('newTaskInput').focus();
+                    break;
+                case 'startTimer':
+                    showView('timer');
+                    startTimer();
+                    break;
+                case 'addRevenue':
+                    const revenue = prompt('Enter revenue amount:');
+                    if (revenue && !isNaN(revenue)) {
+                        addRevenue(parseFloat(revenue));
+                    }
+                    break;
+                case 'addClient':
+                    showView('clients');
+                    document.getElementById('clientModal').classList.remove('hidden');
+                    break;
+            }
+        }
+
+        function addRevenue(amount) {
+            if (!appState.analytics.monthlyRevenue) {
+                appState.analytics.monthlyRevenue = 0;
+            }
+            appState.analytics.monthlyRevenue += amount;
+            saveData();
+            updateUI();
+            showNotification(`Added $${amount} to monthly revenue!`);
+            addActivity(`Added revenue: $${amount}`);
+        }
+
+        function updateUI() {
+            updateTaskLists();
+            updateDashboardStats();
+            updateClientsList();
+            updateGoalsList();
+            updateRecentActivity();
+        }
+
+        function updateTaskLists() {
+            const todoList = document.getElementById('todoList');
+            const doneList = document.getElementById('doneList');
+            
+            const todoTasks = appState.tasks.filter(t => t.status === 'todo');
+            const doneTasks = appState.tasks.filter(t => t.status === 'done' && isToday(t.completedAt));
+
+            // Update counts
+            document.getElementById('todoCount').textContent = todoTasks.length;
+            document.getElementById('doneCount').textContent = doneTasks.length;
+
+            // Render todo tasks
+            todoList.innerHTML = todoTasks.map(task => createTaskHTML(task)).join('');
+
+            // Render done tasks
+            doneList.innerHTML = doneTasks.map(task => createTaskHTML(task)).join('');
+
+            // Add event listeners
+            addTaskEventListeners();
+        }
+
+        function createTaskHTML(task) {
+            const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status === 'todo';
+            const priorityClass = `priority-${task.priority}`;
+            const categoryClass = `category-${task.category}`;
+
+            return `
+                <div class="task-item ${priorityClass} bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md hover:shadow-lg transition-all" data-task-id="${task.id}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <input type="checkbox" ${task.status === 'done' ? 'checked' : ''} 
+                                       class="task-checkbox mr-3 w-5 h-5 text-blue-600 rounded focus:ring-blue-500" 
+                                       onchange="toggleTaskStatus(${task.id})">
+                                <h4 class="font-semibold text-gray-800 dark:text-white ${task.status === 'done' ? 'line-through opacity-60' : ''}">${task.name}</h4>
+                                ${isOverdue ? '<i class="fas fa-exclamation-triangle text-red-500 ml-2" title="Overdue"></i>' : ''}
+                            </div>
+                            
+                            <div class="flex flex-wrap gap-2 mb-2">
+                                <span class="${categoryClass} text-white text-xs px-2 py-1 rounded-full">${task.category}</span>
+                                <span class="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs px-2 py-1 rounded-full">
+                                    ${task.priority} priority
+                                </span>
+                                ${task.deadline ? `<span class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full">
+                                    <i class="fas fa-calendar mr-1"></i>${formatDate(task.deadline)}
+                                </span>` : ''}
+                                ${task.revenue > 0 ? `<span class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-1 rounded-full">
+                                    <i class="fas fa-dollar-sign mr-1"></i>${task.revenue}
+                                </span>` : ''}
+                            </div>
+                            
+                            ${task.notes ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-2">${task.notes}</p>` : ''}
+                            
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                Created: ${formatDateTime(task.createdAt)}
+                                ${task.completedAt ? ` • Completed: ${formatDateTime(task.completedAt)}` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-2 ml-4">
+                            <button onclick="editTask(${task.id})" class="text-blue-500 hover:text-blue-700 p-1" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteTask(${task.id})" class="text-red-500 hover:text-red-700 p-1" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addTaskEventListeners() {
+            // Task checkboxes are handled via onchange attribute
+            // Edit and delete buttons are handled via onclick attributes
+        }
+
+        function updateDashboardStats() {
+            const totalTasks = appState.tasks.length;
+            const completedToday = appState.tasks.filter(t => t.status === 'done' && isToday(t.completedAt)).length;
+            const monthlyRevenue = appState.analytics.monthlyRevenue || 0;
+            const focusTimeToday = appState.analytics.focusTimeToday || 0;
+
+            document.getElementById('totalTasks').textContent = totalTasks;
+            document.getElementById('completedToday').textContent = completedToday;
+            document.getElementById('monthlyRevenue').textContent = `$${monthlyRevenue.toLocaleString()}`;
+            document.getElementById('focusTimeToday').textContent = formatTime(focusTimeToday);
+
+            // Update streak
+            updateStreak();
+        }
+
+        function updateStreak() {
+            const streak = calculateStreak();
+            document.getElementById('streak').textContent = `${streak} days`;
+            appState.analytics.streakDays = streak;
+            saveData();
+        }
+
+        function calculateStreak() {
+            let streak = 0;
+            let currentDate = new Date();
+            
+            while (true) {
+                const dayTasks = appState.tasks.filter(t => 
+                    t.status === 'done' && 
+                    t.completedAt && 
+                    new Date(t.completedAt).toDateString() === currentDate.toDateString()
+                );
+                
+                if (dayTasks.length > 0) {
+                    streak++;
+                    currentDate.setDate(currentDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+            
+            return streak;
+        }
+
+        function updateClientsList() {
+            const clientsList = document.getElementById('clientsList');
+            
+            clientsList.innerHTML = appState.clients.map(client => `
+                <div class="bg-white dark:bg-gray-700 p-6 rounded-lg shadow-md">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-semibold text-lg text-gray-800 dark:text-white">${client.name}</h4>
+                        <button onclick="deleteClient(${client.id})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    ${client.company ? `<p class="text-gray-600 dark:text-gray-400 mb-2">${client.company}</p>` : ''}
+                    ${client.email ? `<p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                        <i class="fas fa-envelope mr-2"></i>${client.email}
+                    </p>` : ''}
+                    ${client.phone ? `<p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                        <i class="fas fa-phone mr-2"></i>${client.phone}
+                    </p>` : ''}
+                    ${client.notes ? `<p class="text-sm text-gray-600 dark:text-gray-400 mt-3">${client.notes}</p>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function deleteClient(clientId) {
+            if (!confirm('Are you sure you want to delete this client?')) return;
+            
+            const clientIndex = appState.clients.findIndex(c => c.id === clientId);
+            if (clientIndex === -1) return;
+            
+            const clientName = appState.clients[clientIndex].name;
+            appState.clients.splice(clientIndex, 1);
+            saveData();
+            updateUI();
+            showNotification('Client deleted', 'warning');
+            addActivity(`Deleted client: ${clientName}`);
+        }
+
+        function updateGoalsList() {
+            const goalsList = document.getElementById('goalsList');
+            
+            goalsList.innerHTML = appState.goals.map(goal => {
+                const progressPercent = goal.target > 0 ? (goal.progress / goal.target) * 100 : 0;
+                const isOverdue = goal.deadline && new Date(goal.deadline) < new Date();
+                
+                return `
+                    <div class="bg-white dark:bg-gray-700 p-6 rounded-lg shadow-md">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-lg text-gray-800 dark:text-white">${goal.title}</h4>
+                            <button onclick="deleteGoal(${goal.id})" class="text-red-500 hover:text-red-700">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        ${goal.description ? `<p class="text-gray-600 dark:text-gray-400 mb-3">${goal.description}</p>` : ''}
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600 dark:text-gray-400">Progress</span>
+                                <span class="text-gray-800 dark:text-white">${goal.progress}/${goal.target}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                <div class="bg-blue-500 h-2 rounded-full" style="width: ${Math.min(progressPercent, 100)}%"></div>
+                            </div>
+                        </div>
+                        
+                        ${goal.deadline ? `
+                            <p class="text-sm ${isOverdue ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}">
+                                <i class="fas fa-calendar mr-2"></i>
+                                Deadline: ${formatDate(goal.deadline)}
+                                ${isOverdue ? ' (Overdue)' : ''}
+                            </p>
+                        ` : ''}
+                        
+                        <div class="mt-3 flex space-x-2">
+                            <button onclick="updateGoalProgress(${goal.id})" class="gradient-primary text-white px-3 py-1 rounded text-sm">
+                                Update Progress
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function deleteGoal(goalId) {
+            if (!confirm('Are you sure you want to delete this goal?')) return;
+            
+            const goalIndex = appState.goals.findIndex(g => g.id === goalId);
+            if (goalIndex === -1) return;
+            
+            const goalTitle = appState.goals[goalIndex].title;
+            appState.goals.splice(goalIndex, 1);
+            saveData();
+            updateUI();
+            showNotification('Goal deleted', 'warning');
+            addActivity(`Deleted goal: ${goalTitle}`);
+        }
+
+        function updateGoalProgress(goalId) {
+            const goal = appState.goals.find(g => g.id === goalId);
+            if (!goal) return;
+            
+            const newProgress = prompt(`Update progress for "${goal.title}" (current: ${goal.progress}):`, goal.progress);
+            if (newProgress === null) return;
+            
+            const progress = parseFloat(newProgress);
+            if (isNaN(progress)) return;
+            
+            goal.progress = Math.max(0, progress);
+            saveData();
+            updateUI();
+            showNotification('Goal progress updated!');
+            addActivity(`Updated progress for goal: ${goal.title}`);
+        }
+
+        function updateRecentActivity() {
+            const recentActivity = document.getElementById('recentActivity');
+            const activities = JSON.parse(localStorage.getItem('entrepreneurActivities')) || [];
+            
+            recentActivity.innerHTML = activities.slice(-5).reverse().map(activity => `
+                <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <i class="fas fa-clock text-gray-400 mr-3"></i>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-800 dark:text-white">${activity.text}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">${formatDateTime(activity.timestamp)}</p>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-gray-500 dark:text-gray-400 text-center py-4">No recent activity</p>';
+        }
+
+        function addActivity(text) {
+            const activities = JSON.parse(localStorage.getItem('entrepreneurActivities')) || [];
+            activities.push({
+                text: text,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Keep only last 50 activities
+            if (activities.length > 50) {
+                activities.splice(0, activities.length - 50);
+            }
+            
+            localStorage.setItem('entrepreneurActivities', JSON.stringify(activities));
+        }
+
+        // Timer functions
+        function startTimer() {
+            if (appState.timer.isRunning) return;
+            
+            appState.timer.isRunning = true;
+            document.getElementById('startTimerBtn').disabled = true;
+            document.getElementById('pauseTimerBtn').disabled = false;
+            
+            appState.timer.interval = setInterval(() => {
+                if (appState.timer.seconds === 0) {
+                    if (appState.timer.minutes === 0) {
+                        // Timer finished
+                        timerComplete();
+                        return;
+                    }
+                    appState.timer.minutes--;
+                    appState.timer.seconds = 59;
+                } else {
+                    appState.timer.seconds--;
+                }
+                
+                updateTimerDisplay();
+                updateTimerCircle();
+            }, 1000);
+            
+            showNotification('Timer started!');
+        }
+
+        function pauseTimer() {
+            if (!appState.timer.isRunning) return;
+            
+            appState.timer.isRunning = false;
+            clearInterval(appState.timer.interval);
+            
+            document.getElementById('startTimerBtn').disabled = false;
+            document.getElementById('pauseTimerBtn').disabled = true;
+            
+            showNotification('Timer paused');
+        }
+
+        function resetTimer() {
+            appState.timer.isRunning = false;
+            clearInterval(appState.timer.interval);
+            
+            appState.timer.minutes = 25;
+            appState.timer.seconds = 0;
+            
+            document.getElementById('startTimerBtn').disabled = false;
+            document.getElementById('pauseTimerBtn').disabled = true;
+            
+            updateTimerDisplay();
+            updateTimerCircle();
+            
+            showNotification('Timer reset');
+        }
+
+        function setTimerMinutes(minutes) {
+            if (appState.timer.isRunning) return;
+            
+            appState.timer.minutes = minutes;
+            appState.timer.seconds = 0;
+            
+            updateTimerDisplay();
+            updateTimerCircle();
+        }
+
+        function timerComplete() {
+            appState.timer.isRunning = false;
+            clearInterval(appState.timer.interval);
+            
+            document.getElementById('startTimerBtn').disabled = false;
+            document.getElementById('pauseTimerBtn').disabled = true;
+            
+            // Add focus time
+            const sessionMinutes = 25; // Default session
+            appState.analytics.focusTimeToday = (appState.analytics.focusTimeToday || 0) + sessionMinutes;
+            saveData();
+            updateUI();
+            
+            showNotification('🎉 Focus session completed!', 'success');
+            addActivity(`Completed ${sessionMinutes}-minute focus session`);
+            
+            // Reset timer
+            appState.timer.minutes = 25;
+            appState.timer.seconds = 0;
+            updateTimerDisplay();
+            updateTimerCircle();
+        }
+
+        function updateTimerDisplay() {
+            const display = document.getElementById('timerDisplay');
+            const minutes = appState.timer.minutes.toString().padStart(2, '0');
+            const seconds = appState.timer.seconds.toString().padStart(2, '0');
+            display.textContent = `${minutes}:${seconds}`;
+        }
+
+        function updateTimerCircle() {
+            const circle = document.getElementById('timerCircle');
+            const totalSeconds = 25 * 60; // Default 25 minutes
+            const currentSeconds = appState.timer.minutes * 60 + appState.timer.seconds;
+            const progress = 1 - (currentSeconds / totalSeconds);
+            const circumference = 2 * Math.PI * 45; // radius = 45
+            const strokeDashoffset = circumference * (1 - progress);
+            
+            circle.style.strokeDashoffset = strokeDashoffset;
+        }
+
+        // Chart initialization
+        function initializeCharts() {
+            initializeCompletionChart();
+            initializeCategoryChart();
+            initializeRevenueChart();
+            initializeFocusChart();
+        }
+
+        function initializeCompletionChart() {
+            const ctx = document.getElementById('completionChart');
+            if (!ctx) return;
+
+            // Get last 7 days of completion data
+            const last7Days = [];
+            const completionData = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                last7Days.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                
+                const completedTasks = appState.tasks.filter(t => 
+                    t.status === 'done' && 
+                    t.completedAt && 
+                    new Date(t.completedAt).toDateString() === date.toDateString()
+                ).length;
+                
+                completionData.push(completedTasks);
+            }
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last7Days,
+                    datasets: [{
+                        label: 'Tasks Completed',
+                        data: completionData,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeCategoryChart() {
+            const ctx = document.getElementById('categoryChart');
+            if (!ctx) return;
+
+            const categories = ['business', 'personal', 'finance', 'marketing', 'development'];
+            const categoryData = categories.map(cat => 
+                appState.tasks.filter(t => t.category === cat).length
+            );
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: categories.map(cat => cat.charAt(0).toUpperCase() + cat.slice(1)),
+                    datasets: [{
+                        data: categoryData,
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(240, 147, 251, 0.8)',
+                            'rgba(79, 172, 254, 0.8)',
+                            'rgba(250, 112, 154, 0.8)',
+                            'rgba(168, 237, 234, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeRevenueChart() {
+            const ctx = document.getElementById('revenueChart');
+            if (!ctx) return;
+
+            // Mock revenue data for the last 6 months
+            const months = [];
+            const revenueData = [];
+            
+            for (let i = 5; i >= 0; i--) {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                months.push(date.toLocaleDateString('en-US', { month: 'short' }));
+                
+                // Calculate revenue for this month (simplified)
+                const monthRevenue = appState.tasks
+                    .filter(t => t.revenue > 0 && t.completedAt)
+                    .reduce((sum, t) => sum + t.revenue, 0) / 6; // Distribute evenly for demo
+                
+                revenueData.push(monthRevenue + Math.random() * 1000); // Add some variation
+            }
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Revenue ($)',
+                        data: revenueData,
+                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeFocusChart() {
+            const ctx = document.getElementById('focusChart');
+            if (!ctx) return;
+
+            // Get last 7 days of focus time data
+            const last7Days = [];
+            const focusData = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                last7Days.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                
+                // Mock focus time data (in minutes)
+                const focusTime = i === 0 ? (appState.analytics.focusTimeToday || 0) : Math.random() * 120;
+                focusData.push(focusTime);
+            }
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: last7Days,
+                    datasets: [{
+                        label: 'Focus Time (minutes)',
+                        data: focusData,
+                        backgroundColor: 'rgba(147, 51, 234, 0.8)',
+                        borderColor: 'rgba(147, 51, 234, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + 'm';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Drag and drop functionality
+        function makeTaskListsSortable() {
+            const todoList = document.getElementById('todoList');
+            if (todoList) {
+                new Sortable(todoList, {
+                    animation: 150,
+                    ghostClass: 'opacity-50',
+                    onEnd: function(evt) {
+                        // Reorder tasks based on new position
+                        const todoTasks = appState.tasks.filter(t => t.status === 'todo');
+                        const movedTask = todoTasks[evt.oldIndex];
+                        todoTasks.splice(evt.oldIndex, 1);
+                        todoTasks.splice(evt.newIndex, 0, movedTask);
+                        
+                        // Update the full tasks array
+                        const doneTasks = appState.tasks.filter(t => t.status === 'done');
+                        appState.tasks = [...todoTasks, ...doneTasks];
+                        saveData();
+                    }
+                });
+            }
+        }
+
+        // Dark mode
+        function setupDarkMode() {
+            if (appState.settings.darkMode) {
+                document.documentElement.classList.add('dark');
+                document.querySelector('.dark-mode-text').textContent = 'Light Mode';
+            }
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            appState.settings.darkMode = !appState.settings.darkMode;
+            
+            const modeText = document.querySelector('.dark-mode-text');
+            modeText.textContent = appState.settings.darkMode ? 'Light Mode' : 'Dark Mode';
+            
+            saveData();
+            
+            // Reinitialize charts for theme change
+            setTimeout(() => {
+                if (appState.currentView === 'analytics') {
+                    initializeCharts();
+                }
+            }, 100);
+        }
+
+        // Data persistence
+        function saveData() {
+            localStorage.setItem('entrepreneurTasks', JSON.stringify(appState.tasks));
+            localStorage.setItem('entrepreneurClients', JSON.stringify(appState.clients));
+            localStorage.setItem('entrepreneurGoals', JSON.stringify(appState.goals));
+            localStorage.setItem('entrepreneurSettings', JSON.stringify(appState.settings));
+            localStorage.setItem('entrepreneurAnalytics', JSON.stringify(appState.analytics));
+        }
+
+        function loadData() {
+            // Data is already loaded in appState initialization
+            
+            // Auto-reset done tasks at midnight
+            const lastReset = localStorage.getItem('lastReset');
+            const today = new Date().toDateString();
+            
+            if (lastReset !== today) {
+                // Move completed tasks to history
+                const completedTasks = appState.tasks.filter(t => t.status === 'done');
+                const history = JSON.parse(localStorage.getItem('taskHistory')) || [];
+                
+                completedTasks.forEach(task => {
+                    history.push({
+                        ...task,
+                        archivedDate: new Date().toISOString()
+                    });
+                });
+                
+                // Remove completed tasks from main list
+                appState.tasks = appState.tasks.filter(t => t.status !== 'done');
+                
+                // Reset daily analytics
+                appState.analytics.focusTimeToday = 0;
+                
+                localStorage.setItem('taskHistory', JSON.stringify(history));
+                localStorage.setItem('lastReset', today);
+                saveData();
+            }
+        }
+
+        function exportData() {
+            const exportData = {
+                tasks: appState.tasks,
+                clients: appState.clients,
+                goals: appState.goals,
+                analytics: appState.analytics,
+                history: JSON.parse(localStorage.getItem('taskHistory')) || [],
+                activities: JSON.parse(localStorage.getItem('entrepreneurActivities')) || [],
+                exportDate: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `entrepreneur-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showNotification('Data exported successfully!');
+        }
+
+        // Utility functions
+        function displayMotivationalQuote() {
+            const quote = quotes[Math.floor(Math.random() * quotes.length)];
+            document.getElementById('motivationalQuote').textContent = quote;
+        }
+
+        function updateCurrentDate() {
+            const now = new Date();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+            
+            // Update quote daily
+            setInterval(() => {
+                displayMotivationalQuote();
+            }, 24 * 60 * 60 * 1000);
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            
+            notificationText.textContent = message;
+            
+            // Set color based on type
+            notification.className = `notification ${type === 'success' ? 'bg-green-500' : type === 'warning' ? 'bg-yellow-500' : type === 'info' ? 'bg-blue-500' : 'bg-red-500'} text-white px-6 py-3 rounded-lg shadow-lg`;
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function isToday(dateString) {
+            if (!dateString) return false;
+            const date = new Date(dateString);
+            const today = new Date();
+            return date.toDateString() === today.toDateString();
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            return new Date(dateString).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        function formatDateTime(dateString) {
+            if (!dateString) return '';
+            return new Date(dateString).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function formatTime(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${hours}h ${mins}m`;
+        }
+
+        // Initialize notification system
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for browser notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        });
+
+        // Service worker for offline support (optional)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                // Register service worker if available
+                // This would be implemented for full PWA support
+            });
+        }
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDqh6iwDUcO4oNe48saWkX%2FnRqn6xmQV%2FLRTW38heW1OpijNaWABvFqg7aIm1WtiJSdFuiMNbRCoUoFBbyfO%2BfqAkNn8yyv4PHzTCU%2BJrqFkYId%2FjrwGOCaUI7e209TNGgN78%2BiVhQWFb3jvvs6L8nsymuyvfwqe8hnaiWPk2zKdh7CbGiNfHEZt5StzOPF2OHDjgYNrunjcR9G6QcWUfhKX14XdzxrCHxtJvo6oOl18vABmD%2BUXN0nS%2F7Mqnfzf%2BOoLlwj9WjOAhNiIOQbRkSCyFY7TCDrRL1rSDrKBs2uM8v%2B6QF%2BT1EVpgvHSrgUMtX5lfsCNmwYNShTHIquvT80RssTxOMwlVHS5TaijInvoJdPhQkluAm2MyUfs50o%2FsE%2BL6S3YeL6igo4ehPwxWweEyEuvU1PNuugeIM%2BtJBrCBfm%2FrZC8%2BSqoTFFSY1R2Y5PPwnGB%2FHKW5zKNd7ZS2oMmsNl2VcfXOE3Sp6hOq277BjY4TNYDk9flNR0zft4darXFtgIWUS7bQ4HMsDArDiHs%3D";
+        window.__genspark_locale = "en-US";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDqh6iwDUcO4oNe48saWkX/nRqn6xmQV/LRTW38heW1OpijNaWABvFqg7aIm1WtiJSdFuiMNbRCoUoFBbyfO+fqAkNn8yyv4PHzTCU+JrqFkYId/jrwGOCaUI7e209TNGgN78+iVhQWFb3jvvs6L8nsymuyvfwqe8hnaiWPk2zKdh7CbGiNfHEZt5StzOPF2OHDjgYNrunjcR9G6QcWUfhKX14XdzxrCHxtJvo6oOl18vABmD+UXN0nS/7Mqnfzf+OoLlwj9WjOAhNiIOQbRkSCyFY7TCDrRL1rSDrKBs2uM8v+6QF+T1EVpgvHSrgUMtX5lfsCNmwYNShTHIquvT80RssTxOMwlVHS5TaijInvoJdPhQkluAm2MyUfs50o/sE+L6S3YeL6igo4ehPwxWweEyEuvU1PNuugeIM+tJBrCBfm/rZC8+SqoTFFSY1R2Y5PPwnGB/HKW5zKNd7ZS2oMmsNl2VcfXOE3Sp6hOq277BjY4TNYDk9flNR0zft4darXFtgIWUS7bQ4HMsDArDiHs=";
+    </script>
+    
+        <script id="html_badge_script2" src="https://www.genspark.ai/html_badge.js"></script>
+        
+    <script id="html_notice_dialog_script" src="https://www.genspark.ai/notice_dialog.js"></script>
+    
